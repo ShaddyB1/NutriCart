@@ -21,6 +21,7 @@ import {
   updateInfluencerProfile,
   purchaseMealPlan,
 } from '../store/slices/influencerSlice';
+import { selectCurrentUser, selectCanEditProfile } from '../store/slices/authSlice';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,24 +29,37 @@ interface InfluencerProfileModalProps {
   visible: boolean;
   influencer: any;
   onClose: () => void;
-  isOwnProfile: boolean;
 }
 
 const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
   visible,
   influencer,
   onClose,
-  isOwnProfile,
 }) => {
   const dispatch = useDispatch();
+  const currentUser = useSelector(selectCurrentUser);
+  const canEdit = useSelector((state: any) => selectCanEditProfile(state, influencer?.id));
+  
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState(influencer);
+
+  // Only allow editing if:
+  // 1. User is logged in
+  // 2. User is an influencer
+  // 3. User is editing their own profile
+  // 4. User is verified
+  const canEditProfile = canEdit && currentUser?.isVerified;
 
   useEffect(() => {
     setEditedProfile(influencer);
   }, [influencer]);
 
   const handleSave = () => {
+    if (!canEditProfile) {
+      Alert.alert('Permission Denied', 'Only verified influencers can edit their profiles.');
+      return;
+    }
+
     dispatch(updateInfluencerProfile({
       id: influencer.id,
       updates: editedProfile,
@@ -55,11 +69,23 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
   };
 
   const handleFollow = () => {
+    if (!currentUser) {
+      Alert.alert('Login Required', 'Please log in to follow influencers.');
+      return;
+    }
     dispatch(followInfluencer(influencer.id));
   };
 
   const handleUnfollow = () => {
     dispatch(unfollowInfluencer(influencer.id));
+  };
+
+  const handlePurchase = (mealPlanId: string) => {
+    if (!currentUser) {
+      Alert.alert('Login Required', 'Please log in to purchase meal plans.');
+      return;
+    }
+    dispatch(purchaseMealPlan(mealPlanId));
   };
 
   if (!influencer) return null;
@@ -80,10 +106,16 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
             <Ionicons name="close" size={24} color="white" />
           </TouchableOpacity>
           
-          {isOwnProfile && (
+          {canEditProfile && (
             <TouchableOpacity
               style={styles.editButton}
-              onPress={() => setIsEditing(!isEditing)}
+              onPress={() => {
+                if (isEditing) {
+                  handleSave();
+                } else {
+                  setIsEditing(true);
+                }
+              }}
             >
               <Ionicons 
                 name={isEditing ? "checkmark" : "pencil"} 
@@ -95,15 +127,29 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
               </Text>
             </TouchableOpacity>
           )}
+          
+          {!currentUser?.isVerified && currentUser?.id === influencer.id && (
+            <View style={styles.verificationBadge}>
+              <Ionicons name="time" size={16} color="orange" />
+              <Text style={styles.verificationText}>Pending Verification</Text>
+            </View>
+          )}
         </LinearGradient>
 
         <ScrollView style={styles.modalContent}>
           {/* Profile Header */}
           <View style={styles.profileHeader}>
-            <Image
-              source={{ uri: influencer.avatar }}
-              style={styles.profileAvatar}
-            />
+            <View style={styles.avatarContainer}>
+              <Image
+                source={{ uri: influencer.avatar }}
+                style={styles.profileAvatar}
+              />
+              {influencer.isVerified && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                </View>
+              )}
+            </View>
             
             {isEditing ? (
               <TextInput
@@ -115,7 +161,12 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
                 placeholder="Name"
               />
             ) : (
-              <Text style={styles.profileName}>{influencer.name}</Text>
+              <View style={styles.nameContainer}>
+                <Text style={styles.profileName}>{influencer.name}</Text>
+                {influencer.isVerified && (
+                  <Text style={styles.verifiedText}>Verified Influencer</Text>
+                )}
+              </View>
             )}
 
             <View style={styles.profileStats}>
@@ -133,7 +184,7 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
               </View>
             </View>
 
-            {!isOwnProfile && (
+            {currentUser?.id !== influencer.id && (
               <TouchableOpacity
                 style={[
                   styles.followButton,
@@ -210,7 +261,7 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
                     </Text>
                     <TouchableOpacity
                       style={styles.purchaseButton}
-                      onPress={() => dispatch(purchaseMealPlan(plan.id))}
+                      onPress={() => handlePurchase(plan.id)}
                     >
                       <Text style={styles.purchaseButtonText}>
                         {plan.price === 0 ? "Get Free" : "Purchase"}
@@ -226,6 +277,15 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
         {isEditing && (
           <View style={styles.editActions}>
             <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => {
+                setIsEditing(false);
+                setEditedProfile(influencer);
+              }}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={styles.saveButton}
               onPress={handleSave}
             >
@@ -240,7 +300,8 @@ const InfluencerProfileModal: React.FC<InfluencerProfileModalProps> = ({
 
 const InfluencerMealPlansScreen: React.FC = () => {
   const dispatch = useDispatch();
-  const { influencers, followedInfluencers, currentUser } = useSelector((state: any) => state.influencer);
+  const currentUser = useSelector(selectCurrentUser);
+  const { influencers, followedInfluencers } = useSelector((state: any) => state.influencer);
   const [selectedInfluencer, setSelectedInfluencer] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -260,10 +321,6 @@ const InfluencerMealPlansScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const isOwnProfile = (influencer: any) => {
-    return currentUser && currentUser.id === influencer.id;
-  };
-
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -274,6 +331,17 @@ const InfluencerMealPlansScreen: React.FC = () => {
         <Text style={styles.headerSubtitle}>
           Discover and follow nutrition experts
         </Text>
+        
+        {currentUser && (
+          <View style={styles.userInfo}>
+            <Text style={styles.welcomeText}>
+              Welcome, {currentUser.name}
+            </Text>
+            <Text style={styles.roleText}>
+              {currentUser.role === 'influencer' ? '🌟 Influencer' : '👤 User'}
+            </Text>
+          </View>
+        )}
       </LinearGradient>
 
       {/* Search and Filter */}
@@ -357,7 +425,6 @@ const InfluencerMealPlansScreen: React.FC = () => {
         visible={modalVisible}
         influencer={selectedInfluencer}
         onClose={() => setModalVisible(false)}
-        isOwnProfile={selectedInfluencer ? isOwnProfile(selectedInfluencer) : false}
       />
     </View>
   );
@@ -546,17 +613,37 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: 'white',
   },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 15,
+  },
   profileAvatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 2,
+  },
+  nameContainer: {
+    alignItems: 'center',
     marginBottom: 15,
   },
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 15,
+  },
+  verifiedText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '500',
+    marginTop: 5,
   },
   profileStats: {
     flexDirection: 'row',
@@ -722,12 +809,27 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   editActions: {
+    flexDirection: 'row',
     padding: 20,
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
   },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 15,
+    borderRadius: 15,
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   saveButton: {
+    flex: 1,
     backgroundColor: '#667eea',
     paddingVertical: 15,
     borderRadius: 15,
@@ -737,6 +839,34 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  verificationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 165, 0, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 15,
+  },
+  verificationText: {
+    color: 'orange',
+    fontSize: 12,
+    marginLeft: 5,
+    fontWeight: '500',
+  },
+  userInfo: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  welcomeText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  roleText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    marginTop: 2,
   },
 });
 

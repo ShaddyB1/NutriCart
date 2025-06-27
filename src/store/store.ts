@@ -1,6 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 // Import all slices
+import authSlice from './slices/authSlice';
 import groceryListSlice from './slices/groceryListSlice';
 import mealPlanSlice from './slices/mealPlanSlice';
 import nutritionSlice from './slices/nutritionSlice';
@@ -13,6 +14,7 @@ import recipeSlice from './slices/recipeSlice';
 
 export const store = configureStore({
   reducer: {
+    auth: authSlice,
     groceryList: groceryListSlice,
     mealPlan: mealPlanSlice,
     nutrition: nutritionSlice,
