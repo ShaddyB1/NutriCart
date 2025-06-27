@@ -3,6 +3,7 @@ export const COLORS = {
   // Primary gradient colors
   primary: '#667eea',
   primaryDark: '#764ba2',
+  primaryLight: '#e6eeff',
   secondary: '#f093fb',
   secondaryDark: '#f5576c',
   accent: '#4facfe',
@@ -29,6 +30,7 @@ export const COLORS = {
   backgroundTertiary: '#edf2f7',
   backgroundOverlay: 'rgba(255, 255, 255, 0.95)',
   backgroundDark: '#1a202c',
+  surface: '#ffffff',
   
   // Border colors
   border: '#e2e8f0',

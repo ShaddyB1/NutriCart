@@ -1,29 +1,29 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 // Import all slices
-import authSlice from './slices/authSlice';
-import groceryListSlice from './slices/groceryListSlice';
-import mealPlanSlice from './slices/mealPlanSlice';
-import nutritionSlice from './slices/nutritionSlice';
-import influencerSlice from './slices/influencerSlice';
-import budgetSlice from './slices/budgetSlice';
-import achievementSlice from './slices/achievementSlice';
-import locationSlice from './slices/locationSlice';
-import offlineSlice from './slices/offlineSlice';
-import recipeSlice from './slices/recipeSlice';
+import authReducer from './slices/authSlice';
+import influencerReducer from './slices/influencerSlice';
+import groceryListReducer from './slices/groceryListSlice';
+import mealPlanReducer from './slices/mealPlanSlice';
+import nutritionReducer from './slices/nutritionSlice';
+import recipeReducer from './slices/recipeSlice';
+import budgetReducer from './slices/budgetSlice';
+import achievementReducer from './slices/achievementSlice';
+import locationReducer from './slices/locationSlice';
+import offlineReducer from './slices/offlineSlice';
 
 export const store = configureStore({
   reducer: {
-    auth: authSlice,
-    groceryList: groceryListSlice,
-    mealPlan: mealPlanSlice,
-    nutrition: nutritionSlice,
-    influencer: influencerSlice,
-    budget: budgetSlice,
-    achievement: achievementSlice,
-    location: locationSlice,
-    offline: offlineSlice,
-    recipe: recipeSlice,
+    auth: authReducer,
+    influencer: influencerReducer,
+    groceryList: groceryListReducer,
+    mealPlan: mealPlanReducer,
+    nutrition: nutritionReducer,
+    recipe: recipeReducer,
+    budget: budgetReducer,
+    achievement: achievementReducer,
+    location: locationReducer,
+    offline: offlineReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
